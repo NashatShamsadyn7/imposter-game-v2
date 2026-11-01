@@ -33,7 +33,7 @@ create or replace function public.notify_push()
 returns trigger as $$
 begin
   perform net.http_post(
-    url := 'https://wfcexabryfemvxkvqiie.supabase.co/functions/v1/send-push',
+    url := 'https://lrqlrbnuukijigrkporv.supabase.co/functions/v1/send-push',
     headers := jsonb_build_object('Content-Type', 'application/json'),
     body := jsonb_build_object('table', TG_TABLE_NAME, 'record', row_to_json(NEW))
   );

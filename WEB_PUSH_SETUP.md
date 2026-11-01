@@ -44,7 +44,7 @@ VITE_VAPID_PUBLIC_KEY = <Public Key>
 ```bash
 # چوونەژوورەوە و بەستنەوە
 supabase login
-supabase link --project-ref wfcexabryfemvxkvqiie
+supabase link --project-ref lrqlrbnuukijigrkporv
 
 # دانانی نهێنییەکان (secrets)
 supabase secrets set \
