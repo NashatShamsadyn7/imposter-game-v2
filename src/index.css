@@ -6,15 +6,13 @@
    ئەگەر فایلەکان نەبوون، خۆکار دەگەڕێتەوە بۆ Vazirmatn */
 @font-face {
   font-family: 'NRT';
-  src: url('/fonts/NRT-Regular.woff2') format('woff2'),
-       url('/fonts/NRT-Regular.ttf') format('truetype');
+  src: url('/fonts/NRT-Regular.woff2') format('woff2');
   font-weight: 400 600;
   font-display: swap;
 }
 @font-face {
   font-family: 'NRT';
-  src: url('/fonts/NRT-Bold.woff2') format('woff2'),
-       url('/fonts/NRT-Bold.ttf') format('truetype');
+  src: url('/fonts/NRT-Bold.woff2') format('woff2');
   font-weight: 700 900;
   font-display: swap;
 }
