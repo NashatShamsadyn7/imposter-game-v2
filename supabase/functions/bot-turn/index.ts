@@ -33,21 +33,54 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
+// ئەگەر مۆدێلەکە لابرابوو (model_not_found)، لە /models مۆدێلێکی بەردەست هەڵدەبژێرین
+let activeModel = MODEL
+
+async function pickAvailableModel(): Promise<string | null> {
+  const res = await fetch(API_URL.replace(/\/chat\/completions$/, '/models'), {
+    headers: { Authorization: `Bearer ${API_KEY}` },
+  })
+  if (!res.ok) return null
+  const ids: string[] = ((await res.json()).data || [])
+    .filter((m: { active?: boolean }) => m.active !== false)
+    .map((m: { id: string }) => m.id)
+    .filter((id: string) => !/whisper|tts|guard|embed|vision|playai|orpheus/i.test(id))
+  // مۆدێلی بێ «بیرکردنەوە» پێش دەخەین، چونکە ئاماژەکان تەنها ٣٢ تۆکنیان هەیە
+  const prefs = [/llama.*70b/i, /llama-4/i, /llama/i, /gpt-oss-120b/i, /gpt-oss/i, /qwen/i]
+  for (const re of prefs) {
+    const hit = ids.find((id) => re.test(id))
+    if (hit) return hit
+  }
+  return ids[0] || null
+}
+
 // بانگکردنی LLM. temperature نزم بۆ لۆژیک، بەرز بۆ سەرنجڕاکێشان.
 async function chat(system: string, user: string, maxTokens = 400, temperature = 0.5): Promise<string> {
-  const res = await fetch(API_URL, {
+  // مۆدێلی reasoning پێش وەڵامدانەوە تۆکن دەخوات — بودجەی زیاتر و بیرکردنەوەی کەم
+  const isReasoning = (model: string) => /gpt-oss|qwen3|deepseek-r1|qwq/i.test(model)
+  const send = (model: string) => fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       temperature,
-      max_tokens: maxTokens,
+      max_tokens: isReasoning(model) ? Math.max(maxTokens, 1024) : maxTokens,
+      ...(isReasoning(model) ? { reasoning_effort: 'low' } : {}),
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user },
       ],
     }),
   })
+  let res = await send(activeModel)
+  if (res.status === 404 || res.status === 400) {
+    const text = await res.text()
+    if (!/model_not_found|decommissioned|does not exist/i.test(text)) throw new Error(`LLM error ${res.status}: ${text}`)
+    const fallback = await pickAvailableModel()
+    if (!fallback || fallback === activeModel) throw new Error(`LLM error ${res.status}: ${text}`)
+    activeModel = fallback
+    res = await send(activeModel)
+  }
   if (!res.ok) throw new Error(`LLM error ${res.status}: ${await res.text()}`)
   const data = await res.json()
   return (data.choices?.[0]?.message?.content || '').trim()
